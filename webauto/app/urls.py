@@ -19,5 +19,7 @@ from . import views
 
 urlpatterns = [
     path('display',views.display,name='display'),
+    path('voice',views.voice,name='voice'),
     path('',views.home,name='home'),
+
 ]

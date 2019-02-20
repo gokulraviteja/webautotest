@@ -13,5 +13,15 @@ def home(request):
         return render(request,"app/home.html")
 
 def display(request):
-    ele=testelement.objects.get(id='1')
-    return render(request,"app/display.html",{"ele":ele})
+    if(request.method== 'POST'):
+        p=request.POST['voicedata']
+        ele=testelement.objects.get(id='1')
+        ele.value=p
+        ele.save()
+        return render(request,"app/display.html",{"ele":ele})
+    else:
+        ele=testelement.objects.get(id='1')
+        return render(request,"app/display.html",{"ele":ele})
+
+def voice(request):
+    return render(request,"app/voice.html")
