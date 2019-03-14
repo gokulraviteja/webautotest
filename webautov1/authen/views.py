@@ -6,31 +6,50 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
 from django.http import HttpResponse
-from .models import command_db,current_db
+from .models import command_db,current_db,main_db
 # Create your views here.
 
 def insert(request):
     if(request.user.is_authenticated):
         if(request.method=="POST"):
             p=request.POST['voicedata']
-            new=command_db.objects.create(command=p)
-            q=command_db.objects.all()
-            cur=current_db.objects.get(id=1)
-            cur.current=q[0].command
-            cur.save()
-            return render(request,'display.html',{'q':q,'cur':cur.current})
-        else:
-            q=command_db.objects.all()
-            if(len(q)!=0):
-                cur=current_db.objects.get(id=1)
-                cur.current=q[0].command
-                cur.save()
+            email=request.user.email
+            q=main_db.objects.all()
+            emails=[]
+            for i in q:
+                emails.append(i.email)
+            if(email in emails):
+                obj=main_db.objects.get(email=email)
+                obj.messages+=(p+'$')
+                obj.count+=1
+                obj.save()
             else:
-                cur=current_db.objects.get(id=1)
-                cur.current=1
-                cur.save()
+                obj=main_db.objects.create(email=email,count=1,messages=(p+'$'),current=p)
+            q=obj.messages
+            q=q.split('$')[:-1]
+            cur=q[0]
+            obj.current=cur
+            obj.save()
+            return render(request,'display.html',{'q':q,'cur':cur})
 
-            return render(request,'display.html',{'q':q,'cur':cur.current})
+
+        else:
+            email=request.user.email
+            obj=main_db.objects.get(email=email)
+            if(obj.count!=0):
+                arr=obj.messages
+                q=arr.split('$')
+                q=q[:-1]
+                cur=q[0]
+                obj.current=cur
+                obj.save()
+            else:
+                cur=1
+                obj.current=1
+                q=[]
+                obj.save()
+
+            return render(request,'display.html',{'q':q,'cur':cur})
 
     else:
         return render(request,'authen/home.html')
@@ -38,25 +57,54 @@ def insert(request):
 
 def checker(request):
     if(request.method=='POST'):
-        instr_exe=cur=current_db.objects.get(id=1)
-        q=command_db.objects.all()
-        if(instr_exe.current!=1):
-
-            q=command_db.objects.all()
-            if(len(q)>0):
-                q[0].delete()
-                q=command_db.objects.all()
-                cur=current_db.objects.get(id=1)
-            if(len(q)>=1):
-                cur.current=q[0].command
+        email=request.user.email
+        obj=main_db.objects.get(email=email)
+        if(obj.count==0):
+            cur=1
+            obj.messages=''
+            obj.save()
+            q=[]
+            return render(request,'display.html',{'q':q,'cur':cur})
+        else:
+            obj.count-=1
+            if(obj.count==0):
+                cur=1
+                obj.messages=''
+                obj.save()
+                q=[]
+                return render(request,'display.html',{'q':q,'cur':cur})
             else:
-                cur.current=1
-            cur.save()
-        return render(request,'display.html',{'q':q,'cur':cur.current})
+                q=obj.messages
+                q=q.split('$')
+                q=q[:-1]
+                q=q[1:]
+                cur=q[0]
+                s=''
+
+                for i in q:
+                    s+=(i+'$')
+                obj.messages=s
+                obj.current=cur
+                obj.save()
+                return render(request,'display.html',{'q':q,'cur':cur})
     else:
-        q=command_db.objects.all()
-        cur=current_db.objects.get(id=1)
-        return render(request,'display.html',{'q':q,'cur':cur.current})
+        email=request.user.email
+        obj=main_db.objects.get(email=email)
+        if(obj.count!=0):
+            arr=obj.messages
+            q=arr.split('$')
+            q=q[:-1]
+            cur=q[0]
+            obj.current=cur
+            obj.save()
+        else:
+
+            obj.current=1
+            q=[]
+            cur=obj.current
+            obj.save()
+
+        return render(request,'display.html',{'q':q,'cur':cur})
 
 
 
